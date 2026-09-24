@@ -1,6 +1,6 @@
 ---
 name: code-write-read
-description: コードを「書く(write)」ときも「読む(read)」ときも常時適用する、『リーダブルコード』と『良いコード/悪いコードで学ぶ設計入門』に基づく可読性・設計ガイド。コードの生成・実装・修正・リファクタリング・レビュー・読解・説明・PR/コミット前チェックなど、コードが関わる作業では言語を問わず(TypeScript, JavaScript, Go, Python, Java, Rust, C++, Ruby, Kotlin, C# など)必ずこのスキルを参照すること。ユーザーが「レビュー」と明示しなくても、コードを書く場面・貼られたコードを読む場面はすべて対象。ただし数行の軽微な修正では出力の重さをスキル内の基準で落とす。読むときは指摘を XXX/FIXME/HACK/TODO の重要度で分類して出力する。
+description: コードを「書く(write)」ときも「読む(read)」ときも常時適用する、『リーダブルコード』と『良いコード/悪いコードで学ぶ設計入門』に基づく可読性・設計ガイド。コードの生成・実装・修正・リファクタリング・レビュー・読解・説明・PR/コミット前チェックなど、コードが関わる作業では言語を問わず(TypeScript, JavaScript, React, Next.js, Go, Python, Java, Rust, C++, Ruby, Kotlin, C# など)必ずこのスキルを参照すること。ユーザーが「レビュー」と明示しなくても、コードを書く場面・貼られたコードを読む場面はすべて対象。ただし数行の軽微な修正では出力の重さをスキル内の基準で落とす。読むときは指摘を XXX/FIXME/HACK/TODO の重要度で分類して出力する。
 ---
 
 # Code Write/Read
@@ -218,4 +218,4 @@ description: コードを「書く(write)」ときも「読む(read)」ときも
 
 - `references/readable-code.md`: 可読性の軸の詳細(命名、コメント、制御フロー、式、変数、コードの再編成)と before/after 例
 - `references/design.md`: 設計の軸の詳細(凝集・結合、完全コンストラクタ、値オブジェクト、不変、条件分岐の整理、コレクション、メソッド設計、リファクタリングの進め方)と before/after 例
-- `references/language-notes.md`: TypeScript/JavaScript、Go、Python、Java、Rust、C++、Ruby、Kotlin、C# での原則の当てはめ方とイディオムとの折り合い
+- `references/language-notes.md`: TypeScript/JavaScript、React/Next.js、Go、Python、Java、Rust、C++、Ruby、Kotlin、C# での原則の当てはめ方とイディオムとの折り合い

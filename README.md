@@ -31,7 +31,7 @@ code-write-read/
 └── references/
     ├── readable-code.md          可読性の軸: 命名・コメント・制御フロー・式・変数の詳細と例
     ├── design.md                 設計の軸: 凝集度・結合度・値オブジェクト・条件分岐整理などの詳細と例
-    └── language-notes.md         TS/JS, Go, Python, Java, Rust, C++, Ruby, Kotlin, C# の言語別の当てはめ方
+    └── language-notes.md         TS/JS(React/Next.js含む), Go, Python, Java, Rust, C++, Ruby, Kotlin, C# の言語別の当てはめ方
 ```
 
 SKILL.md 本体には頻出する原則名の語彙集を載せてあるので、通常の指摘は参照ファイルを開かなくても書ける。参照ファイルは、設計上の判断に迷ったときや言語固有の慣習(Rust の所有権、C++ の RAII など)を確認したいときに読みに行く。
