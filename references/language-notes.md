@@ -20,37 +20,69 @@
 - 文字列への執着を避ける: 文字列リテラルの union 型(`type Status = "draft" | "published"`)
 - 種別による分岐は、判別可能な union と `switch` の網羅性チェック(`never` による漏れ検出)が有効。strategy と使い分ける
 - ID の取り違え防止: branded type
-- `any` を避ける。境界(API レスポンスなど)では `unknown` で受けて検証する
+- `any` を避ける。境界(API レスポンスなど)では `unknown` で受けて、ユーザー定義型ガード(`function isUser(v: unknown): v is User`)で絞る。TypeScript の価値の大半は型定義なので、返り値の型も省略しない
+- 型アサーション `as` の乱用を避ける。`as` は検証せず型を決めつけるので実行時に落ちる。まず型定義とデータ構造を見直し、避けられなければ型ガードで絞る(`as const` は readonly 化なので別。これは可)
+- null / undefined は型で表す。プロパティに `undefined` を直接代入せず、optional(`age?: number`)で表現する。値がないときのデフォルトは `??` が読みやすい
 - エラー: `Error` のサブクラスを throw する。`catch {}` で握り潰さない。Promise の reject を放置しない
 - optional chaining(`?.`)の多用は null が設計に浸透しているサイン。境界で null を排除できないか検討する
-- 命名: 変数・関数は camelCase、型・クラスは PascalCase、定数はプロジェクトの慣習(UPPER_SNAKE_CASE が多い)
+- 命名: 変数・関数は camelCase、型・クラスは PascalCase、定数はプロジェクトの慣習(UPPER_SNAKE_CASE が多い)。配列は複数形(`users`)にし、`~List` は避ける(`List` は言語仕様上の意味を持ちうるため誤解を生む)
 
 ## React / Next.js
 
-『良いコード/悪いコード』のクラス設計の話は、React では「コンポーネント設計」「カスタムフック設計」に置き換えて読む。
+『良いコード/悪いコード』のクラス設計の話は、React では「コンポーネント設計」「カスタムフック設計」に置き換えて読む。AI生成のReactコードで特に頻出するのは、下記の「useEffectで導出」「不要なstate化」「過剰メモ化」の3つ。レビュー時はまずここを見る。
 
 ### コンポーネント設計
-- **1コンポーネント1関心事**: レイアウト、データ取得、状態管理、表示ロジックが1つのコンポーネントに全部乗っていたら分割サイン(神クラス相当)。目安として、JSX が長すぎて画面全体が一目で追えない、useState/useEffect が5個以上並ぶ、はどちらも分割のシグナル
-- **props から導出できる値を state に重複して持たない**(不変・単一の真実の情報源)。`useMemo` で導出する
-- **フラグ props の増殖を避ける**: `<Button variant="primary" />` のように種類で分けるほうが、`isDanger`/`isSmall`/`isOutlined` の組み合わせ爆発より読みやすい〔尋ねるな命じろ〕の変奏。呼び出し側が内部の見た目分岐を知らなくて済む
-- **children とコンポジション**を継承の代わりに使う(そもそも React に継承の概念は薄い)
-- 深い props バケツリレー(prop drilling)は低凝集・密結合の兆候。Context か、コンポーネント合成(children を上位から渡す)で解消する
+- **1コンポーネント1関心事**: レイアウト、データ取得、状態管理、表示ロジックが1つに全部乗っていたら分割サイン(神クラス相当)。目安として、JSX が長くて画面全体を一目で追えない(300行前後が分割検討ライン)、useState/useEffect が多数並ぶ、はどちらも分割シグナル
+- **UI とロジックを分ける**: 「見た目と操作の受け渡し」と「データ取得・状態管理・機能ロジック」を別の層にする。ロジックはカスタムフックへ寄せ、コンポーネントは表示に専念させる(コンテナ/プレゼンテーション、あるいは hooks 分離)
+- **フラグ props の増殖を避ける**: `<Button variant="primary" />` のように種類で分けるほうが、`isDanger`/`isSmall`/`isOutlined` の組み合わせ爆発より読みやすい。呼び出し側が内部の見た目分岐を知らなくて済む〔尋ねるな命じろ〕
+- **props は分割代入で受け、型を付ける**: `({ label, onClick }: ButtonProps)`。`props.` の繰り返しを避け、必要な props が型から一目で分かる
+- **children とコンポジション**を継承の代わりに使う(React に継承の概念は薄い)
+- **prop drilling(深いバケツリレー)は低凝集・密結合の兆候**。特に「自分では props を使わず下へ渡すだけの中間コンポーネント」は見直し対象。上位と統合して階層を浅くするか、Context / コンポーネント合成(children を上位から渡す)で解消する
+- **`export default` を避け、named export を使う**(Next.js が default を要求する page/layout 等は除く)。default だと呼び出し先の名前変更が import に現れず、意図から乖離した変更が入り込みやすい
 
 ### カスタムフック
-- 「無関係な下位問題の抽出」がそのまま当てはまる。データ取得・購読・タイマーなどのロジックは `useXxx` に切り出し、コンポーネントは表示に専念する
-- カスタムフックの名前は目的ベースで(`useUserData` より `useCurrentUserProfile` のように、何のためかが分かる名前)
-- `useEffect` の依存配列は正直に書く。依存を消すために `// eslint-disable` するのは、握り潰しに近い
+- 「無関係な下位問題の抽出」がそのまま当てはまる。データ取得・購読・タイマーなどのロジックは `useXxx` に切り出し、コンポーネントは UI に専念させる
+- **1フック1責務**。`useUser` に fetch・form・validation・pagination を詰め込まない。`useUserFetch` / `useUserForm` のように割る。詰め込むとテストも再利用もできない
+- 名前は目的ベースで(`useUserData` より `useCurrentUserProfile`)
+- テスト可能にするため、依存(fetcher など)は引数で受け取り差し替え可能にする
 
-### 状態管理
-- サーバー由来のデータ(fetchしてきたもの)と、UI 固有の一時状態(モーダルの開閉など)を同じ場所で管理しない。前者はキャッシュ機構(React Query, SWR, Next.js の fetch キャッシュ)に、後者はローカル state に
-- グローバルな状態は「本当にグローバルに必要か」を疑う(YAGNI)。多くは近い親コンポーネントの state で足りる
+### 状態管理(state を増やさない)
+- **計算で求まる値は state にしない**。`useState` + `useEffect` で同期するのではなく、レンダー中に導出するか `useMemo` を使う。二重管理は必ずズレる
+  ```tsx
+  // Before: items が変わるたびに effect で filtered を追従させる(ズレとバグの温床)
+  const [filtered, setFiltered] = useState<Item[]>([]);
+  useEffect(() => { setFiltered(items.filter((i) => i.active)); }, [items]);
+
+  // After: 導出でよい
+  const filtered = useMemo(() => items.filter((i) => i.active), [items]);
+  ```
+- **派生する真偽値を別 state にしない**: `isZero` を state にして effect で同期せず、`const isZero = count === 0;`
+- **サーバー取得済み・props 由来の静的データを state に写さない**: `const items = props.items;` でよい
+- サーバー由来データ(fetch結果)と UI 固有の一時状態(モーダル開閉など)を混ぜない。前者はキャッシュ機構(TanStack Query, SWR, Next.js の fetch キャッシュ)に、後者はローカル state に
+- グローバル状態は「本当にグローバルに必要か」を疑う(YAGNI)。多くは近い親の state か Context で足りる。必要なら Jotai / Zustand などの軽量ライブラリを選ぶ
+
+### useEffect / メモ化
+- **useEffect を反射的に使わない**(React 公式「You Might Not Need an Effect」)。「レンダー中に計算できる」「イベントハンドラ内でやれる」ものを effect に押し込むと、不要な再レンダー・副作用のループ・依存ズレを生む。使うのは外部システムとの同期(購読、DOM 直接操作、非React連携)など、本当に必要な場合に絞る
+- useEffect を使うなら、依存配列は正直に書く。依存を消すための `// eslint-disable` は握り潰しに近い
+- effect 内に処理をベタ書きしない。名前付き関数に切り出して呼ぶ(20〜30行の直書きは範囲が見えなくなる)
+- **`useMemo`/`useCallback` を反射的に付けない**。フック自体にコストがあり、軽い計算(単純な map、文字列結合)に付けると逆効果。使うのは、重い計算、memo 済み子への安定した参照渡し、参照の同一性が要る場面。React 19 の React Compiler が入る環境では、手動メモ化の多くは不要になる
+
+### 型(React 文脈)
+- **API レスポンスを `any` で受けない**。`unknown` で受けてユーザー定義型ガード(`v is User`)で絞る。`as` での決めつけは実行時に落ちる
+- props やモデルの型は、プロジェクトの方針に従い `type` か `interface` に統一する
 
 ### Next.js 固有(App Router)
-- **Server Component をデフォルトにし、`"use client"` は必要な境界だけに絞る**。クライアント境界が上位に寄りすぎると、下のツリー全体がクライアントに引きずられる(密結合)
-- データ取得はコンポーネントに近い場所で行う(取得と表示を素直に対応させる)。ただし同じデータを何度も取得するなら、キャッシュ(`fetch` のデフォルトキャッシュ、`cache()`)を意識する
-- Server Actions のエラーはクライアントに伝える形で返す。`try {} catch {}` で握り潰して何も返さないのは XXX 相当
-- ルートやAPIパスの文字列をハードコードで各所に書かない(マジックナンバーの文字列版)。一箇所で定義して参照する
-- 環境変数は使う場所ごとに `process.env.X` を直書きせず、起動時に検証してから型付きの設定オブジェクトとして扱う(完全コンストラクタの発想)
+- **Server Component をデフォルトにし、`"use client"` は必要な葉の側に絞る**。クライアント境界が上位に寄ると、下のツリー全体がクライアントに引きずられる(密結合)。App Router / RSC / Server Actions を前提にすると、この分離が効く
+- データ取得はできる処理をサーバーで行う(サーバーファースト)。取得と表示を近くに置きつつ、重複取得はキャッシュ(`fetch` のキャッシュ、`cache()`)で抑える
+- Server Actions / Route Handlers のエラーはクライアントへ伝わる形で返す。`try/catch` で握り潰して何も返さないのは XXX 相当。入力は zod 等で検証する
+- 環境変数はクライアント公開のものを `NEXT_PUBLIC_` で明示し、秘密情報をクライアントに混ぜない。使う場所ごとに `process.env.X` を直書きせず、起動時に検証した型付き設定として扱う〔完全コンストラクタの発想〕
+- `next/image` や動的 import(`next/dynamic`)など、フレームワークが用意した最適化手段を、自前実装より先に検討する
+
+### プロジェクト規約に従う領域(スキルが固定しないもの)
+次はチーム/プロジェクトごとに正解が違うため、既存の規約・設定があればそれに従い、無ければ一貫性だけ担保する。スキルとして特定の選択を強制しない。
+- コンポーネント分類の流儀(Atomic Design を採用しているか、features 単位か)とディレクトリ構成
+- スタイリング手法(CSS Modules / Tailwind / CSS-in-JS)
+- 純粋なスタイル規約: 省略記法、`??` 優先、テンプレートリテラル、配列は `T[]` 記法、真偽値 props の省略、`~List` より `~s`、`app/` 配下は kebab-case など。ESLint/Prettier が直せるものは指摘しない
 
 ## Go
 
@@ -140,7 +172,7 @@
 | 言語 | パターン |
 |---|---|
 | TS/JS | `catch {}`、放置された Promise(await も catch もない)、`any` 経由の未検証データ、`==` による意図しない型変換 |
-| React/Next.js | `useEffect` の依存配列の意図的な省略(eslint-disable乗せ)、Server Action での握り潰し、不要な `"use client"` によるクライアント境界の肥大化、キーに index を使った可変リストの `.map()` |
+| React/Next.js | `useEffect` での状態導出(レンダー中に計算できるもの)、計算で求まる値やサーバーデータの不要な state 化、`useEffect` の依存配列の省略(eslint-disable乗せ)、Server Action/Route Handler での握り潰し、API レスポンスの `any`/`as` 決めつけ、キーに index を使った可変リストの `.map()` |
 | Go | `_ = err` や err の無視、goroutine 内の panic 放置、ロックなしでの map の並行書き込み、ループ変数のクロージャ捕捉(Go 1.22 未満) |
 | Python | 裸の `except:`、ミュータブルなデフォルト引数、`eval`/`exec` への外部入力 |
 | Java | 空の catch、`equals` をオーバーライドして `hashCode` をしない、`Optional.get()` の無条件呼び出し |
